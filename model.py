@@ -1,4 +1,4 @@
-import tensorflow as tf
+import tensorflow
 
 
 # Load the pre-trained VGG16 model without the top layer
