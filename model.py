@@ -1,4 +1,7 @@
 import tensorflow
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.layers import Dense, Flatten
+from tensorFlow.keras.models import Models
 
 
 # Load the pre-trained VGG16 model without the top layer
