@@ -2,7 +2,8 @@ import tensorflow
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.layers import Dense, Flatten
 from tensorflow.keras.models import Model
-
+# In order to run tensorflow, ensure that visual studio code is using the correct interpretor
+# For me I had to use 3.11.7 from Homebrew (Mac OS)
 
 # Load the pre-trained VGG16 model without the top layer
 base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
