@@ -4,42 +4,36 @@ import pandas as pd
 from tensorflow.keras.utils import to_categorical
 import argparse
 from model import build_vgg13_model
+from tensorflow.keras.layers import Input
 
 def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_classes=5):
+    # Load CSV file
     df = pd.read_csv(csv_path, header=None)
     df.columns = ['filename', 'box', 'neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear', 'contempt', 'unknown', 'non_face']
     
-    # Keep only the columns for Neutral, Happiness, Surprise, Sadness, and Anger
-    emotion_columns = ['neutral', 'happiness', 'surprise', 'sadness', 'anger']
-    df = df[['filename', 'box'] + emotion_columns]
-
-    # Fill NaN values in the emotion columns with zeros
-    df[emotion_columns] = df[emotion_columns].fillna(0)
-
-    # Convert vote counts to a probability distribution (if necessary)
-    df[emotion_columns] = df[emotion_columns].div(df[emotion_columns].sum(axis=1), axis=0)
+    # Select columns for emotions and calculate the majority vote
+    emotion_columns = df.columns[2:-2]  # Adjust indices as needed
+    df['majority_vote'] = df[emotion_columns].idxmax(axis=1)
     
-    # Determine the majority label
-    df['label'] = df[emotion_columns].idxmax(axis=1)
-    df['label'] = df['label'].apply(lambda x: emotion_columns.index(x) if pd.notna(x) else -1)  # Handle NaN
-
+    # Map the majority vote to an integer label
+    emotion_to_label = {'neutral': 0, 'happiness': 1, 'surprise': 2, 'sadness': 3, 'anger': 4}
+    df['label'] = df['majority_vote'].map(emotion_to_label)
+    
+    # Define TensorFlow parse function
     def parse_function(filename, label):
-        # Construct the file path
         filepath = tf.strings.join([image_folder, filename], separator='/')
         image_string = tf.io.read_file(filepath)
         image_decoded = tf.image.decode_png(image_string, channels=1)
         image_resized = tf.image.resize(image_decoded, image_size)
-    
-        # Use tf.one_hot for one-hot encoding
+
+        label = tf.cast(label, tf.int32)
         label_one_hot = tf.one_hot(label, depth=num_classes)
-    
+
         return image_resized, label_one_hot
-
-
-
+    
+    # Create TensorFlow dataset
     filenames = df['filename'].values
     labels = df['label'].values
-
     dataset = tf.data.Dataset.from_tensor_slices((filenames, labels))
     dataset = dataset.map(parse_function).batch(32)
     
