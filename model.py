@@ -4,8 +4,8 @@ from tensorflow.keras import layers, models
 def build_vgg13_model(num_classes):
     model = models.Sequential()
     
-    # Block 1
-    model.add(layers.Conv2D(64, (3, 3), padding='same', activation='relu', input_shape=(64, 64, 1)))
+    # Block 1: Adjust the input_shape to (48, 48, 1)
+    model.add(layers.Conv2D(64, (3, 3), padding='same', activation='relu', input_shape=(48, 48, 1)))
     model.add(layers.Conv2D(64, (3, 3), padding='same', activation='relu'))
     model.add(layers.MaxPooling2D((2, 2), strides=2))
     model.add(layers.Dropout(0.25))

@@ -3,26 +3,48 @@ import os
 import pandas as pd
 from tensorflow.keras.utils import to_categorical
 import argparse
+from model import build_vgg13_model
 
-def load_and_preprocess_data(csv_path, image_size=(64, 64), num_classes=8):
-    df = pd.read_csv(csv_path)
-    image_paths = df['image_path'].values
-    labels = df['label'].values
+def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_classes=5):
+    df = pd.read_csv(csv_path, header=None)
+    df.columns = ['filename', 'box', 'neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear', 'contempt', 'unknown', 'non_face']
+    
+    # Keep only the columns for Neutral, Happiness, Surprise, Sadness, and Anger
+    emotion_columns = ['neutral', 'happiness', 'surprise', 'sadness', 'anger']
+    df = df[['filename', 'box'] + emotion_columns]
 
-    def _parse_function(filename, label):
-        image_string = tf.io.read_file(filename)
-        image_decoded = tf.image.decode_image(image_string, channels=1)
+    # Fill NaN values in the emotion columns with zeros
+    df[emotion_columns] = df[emotion_columns].fillna(0)
+
+    # Convert vote counts to a probability distribution (if necessary)
+    df[emotion_columns] = df[emotion_columns].div(df[emotion_columns].sum(axis=1), axis=0)
+    
+    # Determine the majority label
+    df['label'] = df[emotion_columns].idxmax(axis=1)
+    df['label'] = df['label'].apply(lambda x: emotion_columns.index(x) if pd.notna(x) else -1)  # Handle NaN
+
+    def parse_function(filename, label):
+        # Construct the file path
+        filepath = tf.strings.join([image_folder, filename], separator='/')
+        image_string = tf.io.read_file(filepath)
+        image_decoded = tf.image.decode_png(image_string, channels=1)
         image_resized = tf.image.resize(image_decoded, image_size)
-        label_one_hot = to_categorical(label, num_classes=num_classes)
+    
+        # Use tf.one_hot for one-hot encoding
+        label_one_hot = tf.one_hot(label, depth=num_classes)
+    
         return image_resized, label_one_hot
 
-    filenames_tensor = tf.constant(image_paths)
-    labels_tensor = tf.constant(labels)
-    
-    dataset = tf.data.Dataset.from_tensor_slices((filenames_tensor, labels_tensor))
-    dataset = dataset.map(_parse_function)
+
+
+    filenames = df['filename'].values
+    labels = df['label'].values
+
+    dataset = tf.data.Dataset.from_tensor_slices((filenames, labels))
+    dataset = dataset.map(parse_function).batch(32)
     
     return dataset
+
 
 # Assume the CSV file has columns 'image_path' and 'label' for image file paths and labels respectively
 
@@ -59,10 +81,20 @@ def display_data_summary(train_dataset, val_dataset, test_dataset):
     pass
 
 def train_and_evaluate(base_folder, training_mode='majority', num_classes=8, max_epochs=100):
+
+    # Construct paths to the image folders and label CSV files
+    train_image_folder = os.path.join(base_folder, 'FER2013Train')
+    val_image_folder = os.path.join(base_folder, 'FER2013Valid')
+    test_image_folder = os.path.join(base_folder, 'FER2013Test')
+
+    train_csv_path = os.path.join(train_image_folder, 'label.csv')
+    val_csv_path = os.path.join(val_image_folder, 'label.csv')
+    test_csv_path = os.path.join(test_image_folder, 'label.csv')
+
     # Load and preprocess the data
-    train_dataset = load_and_preprocess_data(os.path.join(base_folder, 'FER2013Train', 'label.csv'))
-    val_dataset = load_and_preprocess_data(os.path.join(base_folder, 'FER2013Valid', 'label.csv'))
-    test_dataset = load_and_preprocess_data(os.path.join(base_folder, 'FER2013Test', 'label.csv'))
+    train_dataset = load_and_preprocess_data(train_csv_path, train_image_folder, image_size=(48, 48), num_classes=num_classes)
+    val_dataset = load_and_preprocess_data(val_csv_path, val_image_folder, image_size=(48, 48), num_classes=num_classes)
+    test_dataset = load_and_preprocess_data(test_csv_path, test_image_folder, image_size=(48, 48), num_classes=num_classes)
 
     # Display data summary (implement this function based on your needs)
     display_data_summary(train_dataset, val_dataset, test_dataset)
@@ -81,16 +113,44 @@ def train_and_evaluate(base_folder, training_mode='majority', num_classes=8, max
 
     # Start training loop
     for epoch in range(max_epochs):
+        # Initialize variables to accumulate metrics
+        epoch_train_loss = 0
+        epoch_train_accuracy = 0
+        epoch_val_loss = 0
+        epoch_val_accuracy = 0
+        train_batches = 0
+        val_batches = 0
+
         # Training loop
         for images, labels in train_dataset:
             train_step(images, labels, model, loss_fn, optimizer, train_loss, train_accuracy)
+            epoch_train_loss += train_loss.result().numpy()
+            epoch_train_accuracy += train_accuracy.result().numpy()
+            train_batches += 1
 
         # Validation loop
         for images, labels in val_dataset:
             val_step(images, labels, model, loss_fn, val_loss, val_accuracy)
+            epoch_val_loss += val_loss.result().numpy()
+            epoch_val_accuracy += val_accuracy.result().numpy()
+            val_batches += 1
 
-        # Logging and potentially early stopping based on validation accuracy
-        # ...
+        # Calculate average loss and accuracy for the epoch
+        epoch_train_loss /= train_batches
+        epoch_train_accuracy /= train_batches
+        epoch_val_loss /= val_batches
+        epoch_val_accuracy /= val_batches
+
+        # Print metrics
+        print(f"Epoch {epoch+1}/{max_epochs}")
+        print(f"  Train Loss: {epoch_train_loss:.4f}, Train Accuracy: {epoch_train_accuracy * 100:.2f}%")
+        print(f"  Val Loss: {epoch_val_loss:.4f}, Val Accuracy: {epoch_val_accuracy * 100:.2f}%")
+
+        # Reset metrics every epoch
+        train_loss.reset_states()
+        train_accuracy.reset_states()
+        val_loss.reset_states()
+        val_accuracy.reset_states()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
