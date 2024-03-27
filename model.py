@@ -1,27 +1,41 @@
-import tensorflow
-from tensorflow.keras.applications import VGG16
-from tensorflow.keras.layers import Dense, Flatten
-from tensorflow.keras.models import Model
-# In order to run tensorflow, ensure that visual studio code is using the correct interpretor
-# For me I had to use 3.11.7 from Homebrew (Mac OS)
+import tensorflow as tf
+from tensorflow.keras import layers, models
 
-# Load the pre-trained VGG16 model without the top layer
-base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
-
-# Freeze the layers of the base model
-for layer in base_model.layers:
-    layer.trainable = False
-
-# Add new top layers for our classification task
-x = Flatten()(base_model.output)
-x = Dense(1024, activation='relu')(x)
-predictions = Dense(7, activation='softmax')(x)  # Assuming 7 emotions in FER+
-
-# Create the full model
-model = Model(inputs=base_model.input, outputs=predictions)
-
-# Compile the model
-model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-
-# Model summary
-model.summary()
+def build_vgg13_model(num_classes):
+    model = models.Sequential()
+    
+    # Block 1
+    model.add(layers.Conv2D(64, (3, 3), padding='same', activation='relu', input_shape=(64, 64, 1)))
+    model.add(layers.Conv2D(64, (3, 3), padding='same', activation='relu'))
+    model.add(layers.MaxPooling2D((2, 2), strides=2))
+    model.add(layers.Dropout(0.25))
+    
+    # Block 2
+    model.add(layers.Conv2D(128, (3, 3), padding='same', activation='relu'))
+    model.add(layers.Conv2D(128, (3, 3), padding='same', activation='relu'))
+    model.add(layers.MaxPooling2D((2, 2), strides=2))
+    model.add(layers.Dropout(0.25))
+    
+    # Block 3
+    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
+    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
+    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
+    model.add(layers.MaxPooling2D((2, 2), strides=2))
+    model.add(layers.Dropout(0.25))
+    
+    # Block 4
+    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
+    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
+    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
+    model.add(layers.MaxPooling2D((2, 2), strides=2))
+    model.add(layers.Dropout(0.25))
+    
+    # Fully connected layers
+    model.add(layers.Flatten())
+    model.add(layers.Dense(1024, activation='relu'))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.Dense(1024, activation='relu'))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.Dense(num_classes, activation='softmax'))  # Use 'softmax' for multi-class classification
+    
+    return model
