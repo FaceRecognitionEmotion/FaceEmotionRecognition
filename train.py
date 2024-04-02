@@ -12,10 +12,12 @@ def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_cl
     # Define the columns corresponding to the label.csv in each data folder (note columns of interest refer to just the emotions we need)
     columns_of_interest = ['filename', 'neutral', 'happiness', 'surprise', 'sadness', 'anger']
     df.columns = ['filename', 'box'] + columns_of_interest[1:] + ['disgust', 'fear', 'contempt', 'unknown', 'non_face']
+    
     # MAYBE CHANGE TO INCLUDE ALL EMOTIONS, ALSO MAY NEED TO PERMUTATE/SHUFFLE the DATASET EVERY EPOCH.
     df = df[columns_of_interest]
     
     # Calculate the majority vote among the selected emotions
+
     emotion_columns = df.columns[1:] # CHANGE THIS <- We may actually need the filename
     df['majority_vote'] = df[emotion_columns].idxmax(axis=1)
     
