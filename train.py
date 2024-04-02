@@ -9,22 +9,20 @@ from model import build_vgg13_model
 def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_classes=5):
     # Load CSV file
     df = pd.read_csv(csv_path, header=None)
-    # Define the columns corresponding to the image file and the emotions of interest
+    # Define the columns corresponding to the label.csv in each data folder (note columns of interest refer to just the emotions we need)
     columns_of_interest = ['filename', 'neutral', 'happiness', 'surprise', 'sadness', 'anger']
     df.columns = ['filename', 'box'] + columns_of_interest[1:] + ['disgust', 'fear', 'contempt', 'unknown', 'non_face']
-    
-    # Keep only the columns of interest
+    # MAYBE CHANGE TO INCLUDE ALL EMOTIONS, ALSO MAY NEED TO PERMUTATE/SHUFFLE the DATASET EVERY EPOCH.
     df = df[columns_of_interest]
     
     # Calculate the majority vote among the selected emotions
-    emotion_columns = df.columns[1:]  # Skip the filename column
+    emotion_columns = df.columns[1:] # CHANGE THIS <- We may actually need the filename
     df['majority_vote'] = df[emotion_columns].idxmax(axis=1)
     
     # Map the majority vote to an integer label
     emotion_to_label = {emotion: i for i, emotion in enumerate(emotion_columns)}
     df['label'] = df['majority_vote'].map(emotion_to_label)
     
-    # TensorFlow parse function remains unchanged
     def parse_function(filename, label):
         filepath = tf.strings.join([image_folder, filename], separator='/')
         image_string = tf.io.read_file(filepath)
@@ -36,7 +34,7 @@ def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_cl
         
         return image_resized, label_one_hot
     
-    # Dataset creation and batching remain unchanged
+    # LOOK HERE <- Dataset batch processing may need to be changed
     filenames = df['filename'].values
     labels = df['label'].values
     dataset = tf.data.Dataset.from_tensor_slices((filenames, labels))
@@ -45,17 +43,14 @@ def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_cl
     return dataset
 
 
-
-# Assume the CSV file has columns 'image_path' and 'label' for image file paths and labels respectively
-
 def build_and_compile_model(num_classes):
-    model = build_vgg13_model(num_classes)  # Use the build_vgg13_model function from the previous reply
+    model = build_vgg13_model(num_classes)  # from model.py
     model.compile(optimizer='adam',
                   loss='categorical_crossentropy',  # Using 'categorical_crossentropy' for multi-class classification
                   metrics=['accuracy'])
     return model
 
-# Custom training step with Majority Voting
+
 @tf.function
 def train_step(images, labels, model, loss_fn, optimizer, train_loss, train_accuracy):
     with tf.GradientTape() as tape:
@@ -67,7 +62,7 @@ def train_step(images, labels, model, loss_fn, optimizer, train_loss, train_accu
     train_loss.update_state(loss)
     train_accuracy.update_state(labels, predictions)
 
-# Custom validation step
+
 @tf.function
 def val_step(images, labels, model, loss_fn, val_loss, val_accuracy):
     predictions = model(images, training=False)
@@ -76,9 +71,6 @@ def val_step(images, labels, model, loss_fn, val_loss, val_accuracy):
     val_loss.update_state(v_loss)
     val_accuracy.update_state(labels, predictions)
 
-# Assume we have a function to display a summary of the data
-def display_data_summary(train_dataset, val_dataset, test_dataset):
-    pass
 
 def train_and_evaluate(base_folder, training_mode='majority', num_classes=5, max_epochs=25):
     best_val_loss = float('inf')
@@ -100,7 +92,7 @@ def train_and_evaluate(base_folder, training_mode='majority', num_classes=5, max
     # Build and compile the model
     model = build_and_compile_model(num_classes)
 
-    # Prepare for training
+    # Variables for summary after each epoch. Track learning progress.
     loss_fn = tf.keras.losses.CategoricalCrossentropy()
     optimizer = tf.keras.optimizers.Adam(learning_rate=.001)
 
@@ -111,7 +103,7 @@ def train_and_evaluate(base_folder, training_mode='majority', num_classes=5, max
 
     # Start training loop
     for epoch in range(max_epochs):
-        # Initialize variables to accumulate metrics
+        # Initialize variables for metrics
         epoch_train_loss = 0
         epoch_train_accuracy = 0
         epoch_val_loss = 0
@@ -133,6 +125,7 @@ def train_and_evaluate(base_folder, training_mode='majority', num_classes=5, max
             epoch_val_accuracy += val_accuracy.result().numpy()
             val_batches += 1
 
+        #Quick check that we are indeed pulling data from dataset
         for images, labels in train_dataset.take(1):
             print(images.shape, labels.shape)
 
@@ -152,7 +145,7 @@ def train_and_evaluate(base_folder, training_mode='majority', num_classes=5, max
         print(f"  Train Loss: {epoch_train_loss:.4f}, Train Accuracy: {epoch_train_accuracy * 100:.2f}%")
         print(f"  Val Loss: {epoch_val_loss:.4f}, Val Accuracy: {epoch_val_accuracy * 100:.2f}%")
 
-        # Reset metrics every epoch
+        # Reset metrics 
         train_loss.reset_state()
         train_accuracy.reset_state()
         val_loss.reset_state()

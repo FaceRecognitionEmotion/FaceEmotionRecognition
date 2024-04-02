@@ -10,7 +10,6 @@ def build_vgg13_model(num_classes):
     model.add(layers.MaxPooling2D((2, 2), strides=2))
     model.add(layers.Dropout(0.25))
     
-    # Remaining blocks remain unchanged
     model.add(layers.Conv2D(128, (3, 3), padding='same', activation='relu'))
     model.add(layers.Conv2D(128, (3, 3), padding='same', activation='relu'))
     model.add(layers.MaxPooling2D((2, 2), strides=2))
