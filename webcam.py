@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 # Load the pre-trained Keras model
-model_path = "/model/best_model.keras"
+model_path = "./model/best_model.keras"
 tf_model = tf.keras.models.load_model(model_path)
 
 # Initialize the Haar Cascade for face detection

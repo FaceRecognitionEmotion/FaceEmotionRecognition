@@ -3,12 +3,12 @@ import tensorflow as tf
 import numpy as np
 
 #loading the pre-trained keras model
-tf_model = tf.keras.models.load_model("/model/best_model.keras")
+tf_model = tf.keras.models.load_model("./model/best_model.keras")
 tf_model.summary()
 
 # haar cascade used in facial detection
 haar = cv.data.haarcascades
-face_cascade = cv.CascadeClassifier(haar)
+face_cascade = cv.CascadeClassifier("C:/Users/jakea/AppData/Local/Programs/Python/Python312/Lib/site-packages/cv2/data/haarcascade_frontalface_default.xml")
 
 # function used to extract feature from an image
 def feat_extract(image):
@@ -20,9 +20,9 @@ def feat_extract(image):
 emotions = {0:'Neutral', 1: "Happiness", 3: "Surprise", 4: "Sadness", 5: "Anger"}
 
 # get real time video from webcam
-feed = cv.VideoCapture(0)
+feed = cv.VideoCapture(0, cv.CAP_DSHOW)
 
-while True:
+while feed.isOpened():
     i, im = feed.read()
     gray_conv = cv.cvtColor(im, cv.COLOR_BGR2GRAY)
     detect = face_cascade.detectMultiScale(im, 1.3, 5)
