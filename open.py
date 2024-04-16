@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 #loading the pre-trained keras model
-tf_model = tf.keras.models.load_model("best_model.keras")
+tf_model = tf.keras.models.load_model("/model/best_model.keras")
 tf_model.summary()
 
 # haar cascade used in facial detection

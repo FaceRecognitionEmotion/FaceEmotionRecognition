@@ -1,40 +1,52 @@
 import cv2
+import tensorflow as tf
+import numpy as np
 
-# Load the pre-trained face detection model
+# Load the pre-trained Keras model
+model_path = "/model/best_model.keras"
+tf_model = tf.keras.models.load_model(model_path)
+
+# Initialize the Haar Cascade for face detection
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-# Define a video capture object
-vid = cv2.VideoCapture(0)
+# Dictionary mapping model outputs to emotional labels
+emotions = {0:'Neutral', 1:'Happiness', 2:'Surprise', 3:'Sadness', 4:'Anger'}
+
+# Prepare the webcam
+feed = cv2.VideoCapture(0)
+
+def preprocess_face(image):
+    # Resize and normalize the image for the model
+    image = cv2.resize(image, (48, 48))
+    image = np.array(image).reshape(1, 48, 48, 1)
+    return image / 255.0
 
 while True:
-    # Capture the video frame by frame
-    ret, frame = vid.read()
+    ret, frame = feed.read()
+    if not ret:
+        break  # Safely handle if the webcam frame is not read properly
 
-    # Convert the frame to grayscale for face detection
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
 
-    # Detect faces in the grayscale frame
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5, minSize=(30, 30))
-
-    # Iterate over detected faces
     for (x, y, w, h) in faces:
-        # Extract the face region
-        face = gray[y:y+h, x:x+w]
+        face_img = gray[y:y+h, x:x+w]
+        preprocessed_face = preprocess_face(face_img)
 
-        # Resize the face to 48x48
-        face_resized = cv2.resize(face, (48, 48))
+        # Predict emotion
+        prediction = tf_model.predict(preprocessed_face)
+        emotion_label = emotions[np.argmax(prediction)]
 
-        # Display the grayscale face
-        cv2.imshow('face', face_resized)
+        # Draw rectangle around face and label it with the emotion
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        cv2.putText(frame, emotion_label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
 
     # Display the resulting frame
-    cv2.imshow('frame', frame)
+    cv2.imshow('Real-time Facial Emotion Recognition', frame)
 
-    # Press 'q' to quit
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == 27:  # Exit with ESC key
         break
 
-# Release the video capture object
-vid.release()
-# Destroy all the windows
+# Release the capture and destroy all windows when done
+feed.release()
 cv2.destroyAllWindows()
