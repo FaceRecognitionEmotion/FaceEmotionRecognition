@@ -7,7 +7,7 @@ from model import build_vgg13_model
 
 
 def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_classes=5):
-    # Load CSV file
+    
     df = pd.read_csv(csv_path, header=None)
     # Define the columns corresponding to the label.csv in each data folder (note columns of interest refer to just the emotions we need)
     columns_of_interest = ['filename', 'neutral', 'happiness', 'surprise', 'sadness', 'anger']
@@ -16,12 +16,12 @@ def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_cl
     # MAYBE CHANGE TO INCLUDE ALL EMOTIONS, ALSO MAY NEED TO PERMUTATE/SHUFFLE the DATASET EVERY EPOCH.
     df = df[columns_of_interest]
     
-    # Calculate the majority vote among the selected emotions
+    
 
     emotion_columns = df.columns[1:] # CHANGE THIS <- We may actually need the filename
     df['majority_vote'] = df[emotion_columns].idxmax(axis=1)
     
-    # Map the majority vote to an integer label
+    
     emotion_to_label = {emotion: i for i, emotion in enumerate(emotion_columns)}
     df['label'] = df['majority_vote'].map(emotion_to_label)
     
@@ -77,7 +77,7 @@ def val_step(images, labels, model, loss_fn, val_loss, val_accuracy):
 def train_and_evaluate(base_folder, training_mode='majority', num_classes=5, max_epochs=25):
     best_val_loss = float('inf')
 
-    # Construct paths to the image folders and label CSV files
+    
     train_image_folder = os.path.join(base_folder, 'FER2013Train')
     val_image_folder = os.path.join(base_folder, 'FER2013Valid')
     test_image_folder = os.path.join(base_folder, 'FER2013Test')
@@ -86,12 +86,12 @@ def train_and_evaluate(base_folder, training_mode='majority', num_classes=5, max
     val_csv_path = os.path.join(val_image_folder, 'label.csv')
     test_csv_path = os.path.join(test_image_folder, 'label.csv')
 
-    # Load and preprocess the data
+    
     train_dataset = load_and_preprocess_data(train_csv_path, train_image_folder, image_size=(48, 48), num_classes=num_classes)
     val_dataset = load_and_preprocess_data(val_csv_path, val_image_folder, image_size=(48, 48), num_classes=num_classes)
     test_dataset = load_and_preprocess_data(test_csv_path, test_image_folder, image_size=(48, 48), num_classes=num_classes)
 
-    # Build and compile the model
+    #build model
     model = build_and_compile_model(num_classes)
 
     # Variables for summary after each epoch. Track learning progress.
@@ -105,7 +105,7 @@ def train_and_evaluate(base_folder, training_mode='majority', num_classes=5, max
 
     # Start training loop
     for epoch in range(max_epochs):
-        # Initialize variables for metrics
+       
         epoch_train_loss = 0
         epoch_train_accuracy = 0
         epoch_val_loss = 0
@@ -131,7 +131,7 @@ def train_and_evaluate(base_folder, training_mode='majority', num_classes=5, max
         for images, labels in train_dataset.take(1):
             print(images.shape, labels.shape)
 
-        # Calculate average loss and accuracy for the epoch
+        
         epoch_train_loss /= train_batches
         epoch_train_accuracy /= train_batches
         epoch_val_loss /= val_batches
