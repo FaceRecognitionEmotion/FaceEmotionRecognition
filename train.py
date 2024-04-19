@@ -6,24 +6,23 @@ import argparse
 from model import build_vgg13_model
 
 
-def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_classes=5):
-    
-    df = pd.read_csv(csv_path, header=None)
-    # Define the columns corresponding to the label.csv in each data folder (note columns of interest refer to just the emotions we need)
-    columns_of_interest = ['filename', 'neutral', 'happiness', 'surprise', 'sadness', 'anger']
-    df.columns = ['filename', 'box'] + columns_of_interest[1:] + ['disgust', 'fear', 'contempt', 'unknown', 'non_face']
-    
-    # MAYBE CHANGE TO INCLUDE ALL EMOTIONS, ALSO MAY NEED TO PERMUTATE/SHUFFLE the DATASET EVERY EPOCH.
-    df = df[columns_of_interest]
-    
-    
+import pandas as pd
+import tensorflow as tf
 
-    emotion_columns = df.columns[1:] # CHANGE THIS <- We may actually need the filename
-    df['majority_vote'] = df[emotion_columns].idxmax(axis=1)
+def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_classes=8):
+    
+    df = pd.read_csv(csv_path, header=None, usecols=range(10))  
     
     
-    emotion_to_label = {emotion: i for i, emotion in enumerate(emotion_columns)}
+    df.columns = ['filename', 'box', 'neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear', 'contempt']
+    
+    
+    df['majority_vote'] = df.iloc[:, 2:].idxmax(axis=1)
+    
+    
+    emotion_to_label = {'neutral': 0, 'happiness': 1, 'surprise': 2, 'sadness': 3, 'anger': 4, 'disgust': 5, 'fear': 6, 'contempt': 7}
     df['label'] = df['majority_vote'].map(emotion_to_label)
+
     
     def parse_function(filename, label):
         filepath = tf.strings.join([image_folder, filename], separator='/')
@@ -31,18 +30,19 @@ def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_cl
         image_decoded = tf.image.decode_png(image_string, channels=1)
         image_resized = tf.image.resize(image_decoded, image_size)
         
-        label = tf.cast(label, tf.int32)
         label_one_hot = tf.one_hot(label, depth=num_classes)
         
         return image_resized, label_one_hot
+
     
-    # LOOK HERE <- Dataset batch processing may need to be changed
-    filenames = df['filename'].values
-    labels = df['label'].values
-    dataset = tf.data.Dataset.from_tensor_slices((filenames, labels))
-    dataset = dataset.map(parse_function).batch(32)
+    dataset = tf.data.Dataset.from_tensor_slices((df['filename'].values, df['label'].values))
+    dataset = dataset.shuffle(buffer_size=10000)
+    dataset = dataset.map(parse_function, num_parallel_calls=tf.data.AUTOTUNE)
+    dataset = dataset.batch(32)
+    dataset = dataset.prefetch(tf.data.AUTOTUNE)
     
     return dataset
+
 
 
 def build_and_compile_model(num_classes):
@@ -162,7 +162,7 @@ if __name__ == '__main__':
                         help="Specify the training mode: majority")
     parser.add_argument('--epochs', type=int, default=25,
                         help="Maximum number of training epochs.")
-    parser.add_argument('--num_classes', type=int, default=5,
+    parser.add_argument('--num_classes', type=int, default=8,
                         help="Number of emotion classes.")
 
     args = parser.parse_args()

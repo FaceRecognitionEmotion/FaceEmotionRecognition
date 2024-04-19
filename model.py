@@ -1,38 +1,54 @@
 import tensorflow as tf
 from tensorflow.keras import layers, models
 
-def build_vgg13_model(num_classes):
-    model = models.Sequential()
-    
-    # Adjust the input_shape in the first Conv2D layer to (48, 48, 1)
-    model.add(layers.Conv2D(64, (3, 3), padding='same', activation='relu', input_shape=(48, 48, 1)))
-    model.add(layers.Conv2D(64, (3, 3), padding='same', activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2), strides=2))
-    model.add(layers.Dropout(0.25))
-    
-    model.add(layers.Conv2D(128, (3, 3), padding='same', activation='relu'))
-    model.add(layers.Conv2D(128, (3, 3), padding='same', activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2), strides=2))
-    model.add(layers.Dropout(0.25))
+def build_vgg13_model(num_classes, leaky_relu_slope=0.1, dropout_rate=0.5):
+    model = models.Sequential([
+        # First block with 48 filters
+        layers.SeparableConv2D(48, (3, 3), padding='same', input_shape=(48, 48, 1)),
+        layers.BatchNormalization(),
+        layers.LeakyReLU(leaky_relu_slope),
+        layers.SeparableConv2D(48, (3, 3), padding='same'),
+        layers.BatchNormalization(),
+        layers.LeakyReLU(leaky_relu_slope),
+        layers.SeparableConv2D(48, (3, 3), padding='same'),
+        layers.BatchNormalization(),
+        layers.MaxPooling2D((2, 2)),
+        layers.SpatialDropout2D(dropout_rate),
 
-    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
-    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
-    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2), strides=2))
-    model.add(layers.Dropout(0.25))
+        # Second block with 96 filters
+        layers.SeparableConv2D(96, (3, 3), padding='same'),
+        layers.BatchNormalization(),
+        layers.LeakyReLU(leaky_relu_slope),
+        layers.SeparableConv2D(96, (3, 3), padding='same'),
+        layers.BatchNormalization(),
+        layers.LeakyReLU(leaky_relu_slope),
+        layers.SeparableConv2D(96, (3, 3), padding='same'),
+        layers.BatchNormalization(),
+        layers.MaxPooling2D((2, 2)),
+        layers.SpatialDropout2D(dropout_rate),
 
-    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
-    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
-    model.add(layers.Conv2D(256, (3, 3), padding='same', activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2), strides=2))
-    model.add(layers.Dropout(0.25))
+        # Third block with 192 filters
+        layers.SeparableConv2D(192, (3, 3), padding='same'),
+        layers.BatchNormalization(),
+        layers.LeakyReLU(leaky_relu_slope),
+        layers.SeparableConv2D(192, (3, 3), padding='same'),
+        layers.BatchNormalization(),
+        layers.MaxPooling2D((2, 2)),
+        layers.SpatialDropout2D(dropout_rate),
 
-    # Flatten and dense layers
-    model.add(layers.Flatten())
-    model.add(layers.Dense(1024, activation='relu'))
-    model.add(layers.Dropout(0.5))
-    model.add(layers.Dense(1024, activation='relu'))
-    model.add(layers.Dropout(0.5))
-    model.add(layers.Dense(num_classes, activation='softmax'))
+        # Fourth block with 384 filters
+        layers.SeparableConv2D(384, (3, 3), padding='same'),
+        layers.BatchNormalization(),
+        layers.MaxPooling2D((2, 2)),
+        layers.SpatialDropout2D(dropout_rate),
+
+        # Final classification block
+        layers.Flatten(),
+        layers.Dense(1024, activation='relu'),
+        layers.Dropout(0.5),
+        layers.Dense(1024, activation='relu'),
+        layers.Dropout(0.5),
+        layers.Dense(num_classes, activation='softmax')
+    ])
 
     return model
