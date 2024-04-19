@@ -74,7 +74,7 @@ def val_step(images, labels, model, loss_fn, val_loss, val_accuracy):
     val_accuracy.update_state(labels, predictions)
 
 
-def train_and_evaluate(base_folder, training_mode='majority', num_classes=5, max_epochs=25):
+def train_and_evaluate(base_folder, training_mode='majority', num_classes=8, max_epochs=25):
     best_val_loss = float('inf')
 
     
