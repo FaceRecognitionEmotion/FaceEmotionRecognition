@@ -33,9 +33,13 @@ while True:
         prediction = tf_model.predict(preprocessed_face)
         emotion_index = np.argmax(prediction)
         emotion_label = emotions[emotion_index]
+        confidence = np.max(prediction) * 100
+        print(prediction)
 
         cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
         cv2.putText(frame, emotion_label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
+
+        print("Detected emotion: {} with {:.2f}% confidence".format(emotion_label, confidence))
 
     cv2.imshow('Real-time Facial Emotion Recognition', frame)
 
