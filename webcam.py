@@ -16,7 +16,7 @@ feed = cv2.VideoCapture(0)
 def preprocess_face(image):
     image = cv2.resize(image, (48, 48))
     image = np.array(image).reshape(1, 48, 48, 1)
-    return image / 255.0
+    return image
 
 while True:
     ret, frame = feed.read()
@@ -32,6 +32,7 @@ while True:
 
         prediction = tf_model.predict(preprocessed_face)
         emotion_index = np.argmax(prediction)
+        print("Emotion Index: {emotion_index}")
         emotion_label = emotions[emotion_index]
         confidence = np.max(prediction) * 100
         print(prediction)
