@@ -74,7 +74,7 @@ def val_step(images, labels, model, loss_fn, val_loss, val_accuracy):
     val_accuracy.update_state(labels, predictions)
 
 
-def train_and_evaluate(base_folder, training_mode='majority', num_classes=8, max_epochs=50):
+def train_and_evaluate(base_folder, training_mode='majority', num_classes=8, max_epochs=25):
     best_val_loss = float('inf')
 
     
@@ -160,7 +160,7 @@ if __name__ == '__main__':
                         help='Base folder containing the training, validation, and testing data.')
     parser.add_argument('--training_mode', type=str, default='majority',
                         help="Specify the training mode: majority")
-    parser.add_argument('--epochs', type=int, default=50,
+    parser.add_argument('--epochs', type=int, default=25,
                         help="Maximum number of training epochs.")
     parser.add_argument('--num_classes', type=int, default=8,
                         help="Number of emotion classes.")
