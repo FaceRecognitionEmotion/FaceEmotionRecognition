@@ -5,10 +5,6 @@ from tensorflow.keras.utils import to_categorical
 import argparse
 from model import build_vgg13_model
 
-
-import pandas as pd
-import tensorflow as tf
-
 def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_classes=8):
     
     df = pd.read_csv(csv_path, header=None, usecols=range(10))  
