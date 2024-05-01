@@ -4,6 +4,21 @@ import pandas as pd
 from tensorflow.keras.utils import to_categorical
 import argparse
 from model import build_vgg13_model
+import matplotlib.pyplot as plt
+
+train_losses = []
+val_losses = []
+
+def plot_loss(train_losses, val_losses):
+    plt.figure(figsize=(10, 5))
+    plt.plot(train_losses, label='Training Loss')
+    plt.plot(val_losses, label='Validation Loss')
+    plt.title('Training and Validation Loss per Epoch')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 def load_and_preprocess_data(csv_path, image_folder, image_size=(48, 48), num_classes=8):
     
@@ -99,6 +114,7 @@ def train_and_evaluate(base_folder, training_mode='majority', num_classes=8, max
     val_loss = tf.keras.metrics.Mean(name='val_loss')
     val_accuracy = tf.keras.metrics.CategoricalAccuracy(name='val_accuracy')
 
+
     # Start training loop
     for epoch in range(max_epochs):
        
@@ -115,6 +131,7 @@ def train_and_evaluate(base_folder, training_mode='majority', num_classes=8, max
             epoch_train_loss += train_loss.result().numpy()
             epoch_train_accuracy += train_accuracy.result().numpy()
             train_batches += 1
+            
 
         # Validation loop
         for images, labels in val_dataset:
@@ -142,13 +159,17 @@ def train_and_evaluate(base_folder, training_mode='majority', num_classes=8, max
         print(f"Epoch {epoch+1}/{max_epochs}")
         print(f"  Train Loss: {epoch_train_loss:.4f}, Train Accuracy: {epoch_train_accuracy * 100:.2f}%")
         print(f"  Val Loss: {epoch_val_loss:.4f}, Val Accuracy: {epoch_val_accuracy * 100:.2f}%")
+        train_losses.append(epoch_train_loss)
+        val_losses.append(epoch_val_loss)
 
         # Reset metrics 
         train_loss.reset_state()
         train_accuracy.reset_state()
         val_loss.reset_state()
         val_accuracy.reset_state()
-
+        
+    plot_loss(train_losses, val_losses)
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
